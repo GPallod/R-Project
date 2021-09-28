@@ -1,0 +1,122 @@
+---
+title: "Coursera first project in R"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(ggplot2)
+library(dplyr)
+load("~/Documents/Experiments with Python/brfss2013.RData")
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(children), !is.na(income2), !is.na(smoke100))
+```
+
+## Introduction
+I will be conducting analysis using The Behavioral Risk Factor Surveillance System (BRFSS) - 2013. I will investigate questions related to income, smoking, children, and their effects on one another.
+
+We have to remember that there are humans involved in the process, so it is very much possible that the interviewer might have misheard, made a data-entry mistake, or the person being interviewed lied, etc. So, the data should be considered from this perspective.
+
+Key Facts about the collection of data- 
+- They include people from all social, economics, racial backgrounds.
+- The people interviewed are randomly selected.
+Thus, this sample of data can be considered to be a representative of the total population.
+
+#### Q1) How many people are there in each Income Bracket?
+
+```{r}
+brfss2013 %>%
+  filter(!is.na(income2)) %>%
+  group_by(income2) %>%
+  summarise(count = n())
+```
+
+It might be useful to plot it
+```{r}
+ggplot(data=brfss2013) + geom_histogram(aes(x=income2), stat = "count") + 
+  labs(title="Number of people in each Income Bracket", x = "Income Brackets", y = "No. of people per bracket") + 
+  theme(axis.text.x = element_text(angle=45, hjust=0.7))
+```
+
+
+
+#### Q2) Do rich people more children?
+
+There can be reasons for both sides. Rich people have more money to spend on each child, but have less time to take care of them. Let's see what the answer is.
+
+```{r}
+brfss2013 %>%
+  filter(!is.na(children), !is.na(income2)) %>%
+  group_by(income2) %>%
+  summarise(mean = mean(children))
+```
+
+Again, lets plot this
+
+```{r}
+brfss2013 %>%
+  group_by(income2) %>%
+  summarise(mean_child = mean(children)) %>%
+  ggplot(aes(x=income2, y=mean_child)) + geom_bar(stat='identity') + 
+  labs(title="Average number of children per Income Bracket", x="Income Brackets", y="Average number of children") + 
+  theme(axis.text.x = element_text(angle=45, hjust=0.7))
+```
+It is important to remember that this doesn't show causation, it just proves correlation. It is possible that children cause parents to become rich, or that people with higher income are are likely to have more children . Let's check if there is some correlation between smoking and income.
+
+#### Q3) Do rich people smoke more?
+
+We need to find how many smokers are there within each income bracket.
+
+```{r}
+smokers_income <- brfss2013 %>%
+  group_by(income2, smoke100) %>%
+  summarise(smokers = n())
+smokers_income
+```  
+
+Let's plot this
+
+```{r}
+p <- ggplot(data=smokers_income, aes(x=income2, y=smokers, fill=smoke100)) + geom_bar(position = position_dodge(), stat="identity")
+p <- p + 
+  labs(title="Number of Smokers per Income Bracket", x="Income Brackets", y="Number of smokers") + 
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  guides(fill=guide_legend(title="Do you smoke?"))
+p
+```
+It is important to remember that this doesn't show causation, it just proves correlation. It is possible that smoking cause people to become rich, or people who smoke are likely to be rich.
+
+#### Q4) Do parents smoke more?
+This might be a legitimate question to ask. I suspect that yes, parents will be less likely to smoke as 1) Passive smoking is harmful for the kids; and 2) This might set a bad example. People without kids have none of these factors to worry about, so they might be more likely to smoke. But it is also possible that people with children have to deal with more stress, so they might smoke more.
+
+```{r}
+smokers_children <- brfss2013 %>%
+  filter(children < 5) %>%
+  group_by(children, smoke100) %>%
+  summarise(smokers = n())
+smokers_children
+```
+
+Let's graph this.
+
+```{r}
+p <- ggplot(data=smokers_children, aes(x=children, y=smokers, fill=smoke100)) + geom_bar(stat="identity", position = "fill")
+p <- p + 
+  labs(title="Number of smokers based on no. of children", x="Number of Children", y="Number of smokers") +
+  theme(legend.position = "right", axis.text.x = element_text(angle = 45, hjust = 0.8)) +
+  guides(fill=guide_legend(title="Do you smoke?"))
+p
+```
+
+So, yes, there is a slight increase in percentage of smokers as number of children increase. There is might be possible that people who smoke, don't have children or it could be that having children causes you to smoke less.
+
+# Conclusion
+This this program, I have found that there is a :
+- Positive correlation between wealth and probability of smoking.
+- Positive correlation between wealth and number of children.
+- Negative correlation between number of children and probability of smoking.
+
+There has to be further scrutiny done to be more sure of these findings, as I have just scratched the surface. Had a lot of fun doing my Project in R!
